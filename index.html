@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador FOV Dron</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .simulation-area {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: #90EE90;
+            border: 2px solid #2F4F2F;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .drone {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #228B22;
+            border: 3px solid #006400;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .drone::before {
+            content: '🚁';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+        }
+        
+        .fov-cone {
+            position: absolute;
+            transform-origin: top center;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+        
+        .ground-coverage {
+            position: absolute;
+            background: rgba(173, 255, 47, 0.4);
+            border: 3px solid #32CD32;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .sample-area {
+            position: absolute;
+            background: rgba(255, 215, 0, 0.6);
+            border: 2px solid #DAA520;
+            transition: all 0.3s ease;
+        }
+        
+        .vegetation {
+            position: absolute;
+            background: radial-gradient(circle, #228B22, #006400);
+            border-radius: 50%;
+            opacity: 0.9;
+            border: 1px solid #2F4F2F;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .simulation-area {
+                height: 400px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .control-group h3 {
+                font-size: 14px;
+            }
+        }
+        
+        .control-group {
+            background: #f8fdf8;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #32CD32;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .slider-container {
+            margin: 10px 0;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        .value-display {
+            font-size: 14px;
+            color: #228B22;
+            font-weight: bold;
+        }
+        
+        .info-panel {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .info-item .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .info-item .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #228B22;
+        }
+        
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #228B22;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        
+        button:hover {
+            background: #006400;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Simulador de Campo de Visión (FOV) - Dron</h1>
+            <p class="subtitle">Visualización interactiva del área de cobertura y resolución espacial</p>
+        </div>
+        
+        <div class="simulation-area" id="simulationArea">
+            <div class="drone" id="drone"></div>
+            <div class="fov-cone" id="fovCone"></div>
+            <div class="ground-coverage" id="groundCoverage"></div>
+            <div class="sample-area" id="sampleArea"></div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>🚁 Posición del Dron</h3>
+                <div class="slider-container">
+                    <label>Altura (m): <span class="value-display" id="alturaValue">100</span></label>
+                    <input type="range" id="altura" min="20" max="300" value="100" step="10">
+                </div>
+                <div class="slider-container">
+                    <label>Posición X: <span class="value-display" id="posXValue">50</span>%</label>
+                    <input type="range" id="posX" min="0" max="100" value="50" step="1">
+                </div>
+                <div class="slider-container">
+                    <label>Posición Y: <span class="value-display" id="posYValue">30</span>%</label>
+                    <input type="range" id="posY" min="0" max="70" value="30" step="1">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>📷 Parámetros de Cámara</h3>
+                <div class="slider-container">
+                    <label>Campo de Visión (°): <span class="value-display" id="fovValue">73.9</span></label>
+                    <input type="range" id="fov" min="30" max="120" value="73.9" step="0.1">
+                </div>
+                <div class="slider-container">
+                    <label>Tamaño Pixel (μm): <span class="value-display" id="resolucionValue">3.5</span></label>
+                    <input type="range" id="resolucion" min="2.0" max="8.0" value="3.5" step="0.1">
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>📊 Información Calculada</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="label">Área de Cobertura Total</div>
+                    <div class="value" id="areaCoverage">0 m²</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Ancho de Cobertura</div>
+                    <div class="value" id="anchoImagen">0 m</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Muestra de 1m² (cuadrado)</div>
+                    <div class="value" id="areaMuestra">1 m²</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Píxeles por m²</div>
+                    <div class="value" id="pixelesPorM2">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button onclick="startAnimation()">▶️ Iniciar Vuelo</button>
+            <button onclick="stopAnimation()">⏹️ Detener</button>
+            <button onclick="resetPosition()">🔄 Reiniciar</button>
+        </div>
+    </div>
+
+    <script>
+        let animationId;
+        let isAnimating = false;
+        
+        // Elementos del DOM
+        const drone = document.getElementById('drone');
+        const fovCone = document.getElementById('fovCone');
+        const groundCoverage = document.getElementById('groundCoverage');
+        const sampleArea = document.getElementById('sampleArea');
+        const simulationArea = document.getElementById('simulationArea');
+        
+        // Controles
+        const alturaSlider = document.getElementById('altura');
+        const posXSlider = document.getElementById('posX');
+        const posYSlider = document.getElementById('posY');
+        const fovSlider = document.getElementById('fov');
+        const resolucionSlider = document.getElementById('resolucion');
+        
+        // Crear vegetación aleatoria
+        function createVegetation() {
+            for (let i = 0; i < 15; i++) {
+                const vegetation = document.createElement('div');
+                vegetation.className = 'vegetation';
+                vegetation.style.left = Math.random() * 90 + '%';
+                vegetation.style.top = Math.random() * 60 + 40 + '%';
+                vegetation.style.width = Math.random() * 20 + 10 + 'px';
+                vegetation.style.height = vegetation.style.width;
+                simulationArea.appendChild(vegetation);
+            }
+        }
+        
+        function updateSimulation() {
+            const altura = parseFloat(alturaSlider.value);
+            const posX = parseFloat(posXSlider.value);
+            const posY = parseFloat(posYSlider.value);
+            const fov = parseFloat(fovSlider.value);
+            const resolucion = parseFloat(resolucionSlider.value);
+            
+            // Actualizar valores mostrados
+            document.getElementById('alturaValue').textContent = altura;
+            document.getElementById('posXValue').textContent = posX;
+            document.getElementById('posYValue').textContent = posY;
+            document.getElementById('fovValue').textContent = fov.toFixed(1);
+            document.getElementById('resolucionValue').textContent = resolucion.toFixed(1);
+            
+            // Calcular dimensiones
+            const fovRad = fov * Math.PI / 180;
+            const anchoCobertura = 2 * altura * Math.tan(fovRad / 2);
+            const areaCobertura = Math.PI * Math.pow(anchoCobertura / 2, 2);
+            // Calcular resolución espacial real (GSD - Ground Sample Distance)
+            // Parámetros realistas de cámara
+            const focalLength = 24; // Distancia focal en mm (típica para drones)
+            const sensorWidth = 13.2; // Ancho del sensor en mm (típico para cámaras de dron)
+            const imageWidthPx = 4000; // Resolución de imagen en píxeles (4K)
+            const pixelSizeMicrons = resolucion; // Tamaño del píxel en micras
+            
+            // GSD = (altura * pixelSize * 100) / focalLength  [en cm]
+            const gsdCm = (altura * pixelSizeMicrons * 0.0001) / (focalLength * 0.001);
+            const pixelesPorMetro = 100 / gsdCm; // píxeles por metro
+            const pixelesPorM2 = Math.pow(pixelesPorMetro, 2);
+            
+            // Actualizar información
+            document.getElementById('areaCoverage').textContent = areaCobertura.toFixed(1) + ' m²';
+            document.getElementById('anchoImagen').textContent = anchoCobertura.toFixed(1) + ' m';
+            document.getElementById('areaMuestra').textContent = '1.0 m²';
+            document.getElementById('pixelesPorM2').textContent = pixelesPorM2.toFixed(0);
+            
+            // Obtener dimensiones del área de simulación
+            const areaRect = simulationArea.getBoundingClientRect();
+            const areaWidth = areaRect.width;
+            const areaHeight = areaRect.height;
+            
+            // Posicionar dron
+            const droneX = (posX / 100) * areaWidth - 20;
+            const droneY = (posY / 100) * areaHeight - 20;
+            drone.style.left = droneX + 'px';
+            drone.style.top = droneY + 'px';
+            
+            // Calcular cobertura en el suelo (escala visual)
+            const escalaAltura = altura / 100; // Factor de escala basado en altura
+            const diametroVisual = (anchoCobertura / 200) * areaWidth * escalaAltura;
+            
+            // Actualizar cobertura del suelo
+            groundCoverage.style.width = diametroVisual + 'px';
+            groundCoverage.style.height = diametroVisual + 'px';
+            groundCoverage.style.left = (droneX + 20 - diametroVisual/2) + 'px';
+            groundCoverage.style.top = (droneY + 20 - diametroVisual/2) + 'px';
+            
+            // Actualizar área de muestra (1m² como cuadrado - proporcionalmente escalado)
+            const metrosPorPixel = anchoCobertura / diametroVisual; // metros por pixel
+            const tamanoMuestra1m = 1 / metrosPorPixel; // 1 metro cuadrado en píxeles
+            
+            sampleArea.style.width = tamanoMuestra1m + 'px';
+            sampleArea.style.height = tamanoMuestra1m + 'px';
+            sampleArea.style.borderRadius = '3px'; // Cuadrado con esquinas ligeramente redondeadas
+            sampleArea.style.left = (droneX + 20 - tamanoMuestra1m/2) + 'px';
+            sampleArea.style.top = (droneY + 20 - tamanoMuestra1m/2 + diametroVisual/4) + 'px';
+            
+            // Crear cono de visión usando elemento SVG para mejor visualización
+            fovCone.innerHTML = '';
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.position = 'absolute';
+            svg.style.left = (droneX + 20) + 'px';
+            svg.style.top = (droneY + 20) + 'px';
+            svg.style.width = diametroVisual + 'px';
+            svg.style.height = diametroVisual + 'px';
+            svg.style.transform = 'translate(-50%, -50%)';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '5';
+            
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const centerX = diametroVisual / 2;
+            const centerY = diametroVisual / 2;
+            const radius = diametroVisual / 2;
+            
+            // Crear un cono más realista con líneas desde el centro
+            const points = [];
+            const numPoints = 20;
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = (i / numPoints) * 2 * Math.PI;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                points.push(`${x},${y}`);
+            }
+            points.push(`${centerX},${centerY}`);
+            
+            polygon.setAttribute('points', points.join(' '));
+            polygon.setAttribute('fill', 'rgba(255, 215, 0, 0.3)');
+            polygon.setAttribute('stroke', '#DAA520');
+            polygon.setAttribute('stroke-width', '2');
+            
+            svg.appendChild(polygon);
+            fovCone.appendChild(svg);
+        }
+        
+        function startAnimation() {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            let directionX = 1;
+            let directionY = 1;
+            let positionX = parseFloat(posXSlider.value);
+            let positionY = parseFloat(posYSlider.value);
+            
+            function animate() {
+                // Movimiento en X
+                positionX += directionX * 0.3;
+                if (positionX >= 85) {
+                    directionX = -1;
+                } else if (positionX <= 15) {
+                    directionX = 1;
+                }
+                
+                // Movimiento en Y (más lento)
+                positionY += directionY * 0.15;
+                if (positionY >= 60) {
+                    directionY = -1;
+                } else if (positionY <= 10) {
+                    directionY = 1;
+                }
+                
+                posXSlider.value = positionX;
+                posYSlider.value = positionY;
+                updateSimulation();
+                
+                if (isAnimating) {
+                    animationId = requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+        
+        function stopAnimation() {
+            isAnimating = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        function resetPosition() {
+            stopAnimation();
+            alturaSlider.value = 100;
+            posXSlider.value = 50;
+            posYSlider.value = 30;
+            fovSlider.value = 73.9;
+            resolucionSlider.value = 3.5;
+            updateSimulation();
+        }
+        
+        // Event listeners
+        alturaSlider.addEventListener('input', updateSimulation);
+        posXSlider.addEventListener('input', updateSimulation);
+        posYSlider.addEventListener('input', updateSimulation);
+        fovSlider.addEventListener('input', updateSimulation);
+        resolucionSlider.addEventListener('input', updateSimulation);
+        
+        // Inicializar
+        createVegetation();
+        updateSimulation();
+    </script>
+</body>
+</html>

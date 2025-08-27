@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Neuronal Simple</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto 20px;
+            background: white;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .value {
+            text-align: center;
+            color: #764ba2;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            font-size: 14px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .output {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .output h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .prediction {
+            font-size: 24px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        .info {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                max-width: 95%;
+                padding: 20px;
+            }
+            
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+            }
+            
+            .container {
+                margin-top: 20px;
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            button {
+                width: 100%;
+                padding: 15px;
+            }
+            
+            canvas {
+                width: 100%;
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Red Neuronal Simple</h1>
+        <div class="subtitle">Perceptrón de 2 capas para clasificación XOR</div>
+        
+        <div class="info">
+            <strong>Cómo funciona:</strong> Esta red tiene 2 entradas, 4 neuronas ocultas y 1 salida. 
+            Ajusta los pesos y bias para ver cómo cambia la predicción. La función de activación es sigmoid.
+            El problema XOR es el clásico ejemplo no-lineal: (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0
+        </div>
+        
+        <canvas id="network" width="800" height="400"></canvas>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Entrada X1</label>
+                <input type="range" id="input1" min="0" max="1" step="0.01" value="0">
+                <div class="value" id="input1Val">0.00</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Entrada X2</label>
+                <input type="range" id="input2" min="0" max="1" step="0.01" value="0">
+                <div class="value" id="input2Val">0.00</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Learning Rate</label>
+                <input type="range" id="learningRate" min="0.01" max="1" step="0.01" value="0.5">
+                <div class="value" id="learningRateVal">0.50</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Función de Activación</label>
+                <select id="activation">
+                    <option value="sigmoid">Sigmoid</option>
+                    <option value="tanh">Tanh</option>
+                    <option value="relu">ReLU</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Épocas de Entrenamiento</label>
+                <input type="range" id="epochs" min="100" max="5000" step="100" value="1000">
+                <div class="value" id="epochsVal">1000</div>
+            </div>
+            
+            <div class="control-group">
+                <label>Error Actual</label>
+                <div class="value" id="currentError">-</div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button onclick="randomizeWeights()">🎲 Pesos Aleatorios</button>
+            <button onclick="trainNetworkReal()">🎯 Entrenar con Backprop</button>
+            <button onclick="testAllCases()">🧪 Probar Todos los Casos</button>
+        </div>
+        
+        <div class="output">
+            <h3>Salida de la Red</h3>
+            <div class="prediction" id="prediction">0.00</div>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                Clasificación: <span id="classification">0</span> (umbral: 0.5)
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('network');
+        const ctx = canvas.getContext('2d');
+        
+        // Configuración de la red
+        let network = {
+            inputs: [0, 0],
+            hidden: [0, 0, 0, 0],
+            output: 0,
+            weights: {
+                inputToHidden: [
+                    [2, -2, 2, -2],  // desde input 1
+                    [2, 2, -2, -2]   // desde input 2
+                ],
+                hiddenToOutput: [1, -1, 1, -1]
+            },
+            bias: {
+                hidden: [-1, -3, -3, -1],
+                output: -0.5
+            }
+        };
+        
+        // Funciones de activación
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x))));
+        }
+        
+        function sigmoidDerivative(x) {
+            const s = sigmoid(x);
+            return s * (1 - s);
+        }
+        
+        function tanh(x) {
+            return Math.tanh(Math.max(-500, Math.min(500, x)));
+        }
+        
+        function tanhDerivative(x) {
+            const t = tanh(x);
+            return 1 - t * t;
+        }
+        
+        function relu(x) {
+            return Math.max(0, x);
+        }
+        
+        function reluDerivative(x) {
+            return x > 0 ? 1 : 0;
+        }
+        
+        function activate(x, type = 'sigmoid') {
+            switch(type) {
+                case 'sigmoid': return sigmoid(x);
+                case 'tanh': return tanh(x);
+                case 'relu': return relu(x);
+                default: return sigmoid(x);
+            }
+        }
+        
+        function activateDerivative(x, type = 'sigmoid') {
+            switch(type) {
+                case 'sigmoid': return sigmoidDerivative(x);
+                case 'tanh': return tanhDerivative(x);
+                case 'relu': return reluDerivative(x);
+                default: return sigmoidDerivative(x);
+            }
+        }
+        
+        // Forward propagation
+        function forward() {
+            // Capa oculta
+            for (let i = 0; i < 4; i++) {
+                let sum = network.bias.hidden[i];
+                for (let j = 0; j < 2; j++) {
+                    sum += network.inputs[j] * network.weights.inputToHidden[j][i];
+                }
+                network.hidden[i] = sigmoid(sum);
+            }
+            
+            // Capa de salida
+            let sum = network.bias.output;
+            for (let i = 0; i < 4; i++) {
+                sum += network.hidden[i] * network.weights.hiddenToOutput[i];
+            }
+            network.output = sigmoid(sum);
+        }
+        
+        // Dibujar la red
+        function drawNetwork() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Posiciones de los nodos
+            const layers = {
+                input: [{x: 150, y: 150}, {x: 150, y: 250}],
+                hidden: [
+                    {x: 400, y: 80},
+                    {x: 400, y: 160},
+                    {x: 400, y: 240},
+                    {x: 400, y: 320}
+                ],
+                output: [{x: 650, y: 200}]
+            };
+            
+            // Dibujar conexiones input -> hidden
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const weight = network.weights.inputToHidden[i][j];
+                    ctx.beginPath();
+                    ctx.moveTo(layers.input[i].x, layers.input[i].y);
+                    ctx.lineTo(layers.hidden[j].x, layers.hidden[j].y);
+                    ctx.strokeStyle = weight > 0 ? `rgba(76, 175, 80, ${Math.abs(weight)/5})` : 
+                                                   `rgba(244, 67, 54, ${Math.abs(weight)/5})`;
+                    ctx.lineWidth = Math.abs(weight) + 1;
+                    ctx.stroke();
+                }
+            }
+            
+            // Dibujar conexiones hidden -> output
+            for (let i = 0; i < 4; i++) {
+                const weight = network.weights.hiddenToOutput[i];
+                ctx.beginPath();
+                ctx.moveTo(layers.hidden[i].x, layers.hidden[i].y);
+                ctx.lineTo(layers.output[0].x, layers.output[0].y);
+                ctx.strokeStyle = weight > 0 ? `rgba(76, 175, 80, ${Math.abs(weight)/5})` : 
+                                               `rgba(244, 67, 54, ${Math.abs(weight)/5})`;
+                ctx.lineWidth = Math.abs(weight) + 1;
+                ctx.stroke();
+            }
+            
+            // Dibujar nodos de entrada
+            for (let i = 0; i < 2; i++) {
+                ctx.beginPath();
+                ctx.arc(layers.input[i].x, layers.input[i].y, 25, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(102, 126, 234, ${0.3 + network.inputs[i] * 0.7})`;
+                ctx.fill();
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`X${i+1}`, layers.input[i].x, layers.input[i].y);
+                
+                ctx.font = '11px Arial';
+                ctx.fillText(network.inputs[i].toFixed(2), layers.input[i].x, layers.input[i].y + 40);
+            }
+            
+            // Dibujar nodos ocultos
+            for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.arc(layers.hidden[i].x, layers.hidden[i].y, 20, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(118, 75, 162, ${0.3 + network.hidden[i] * 0.7})`;
+                ctx.fill();
+                ctx.strokeStyle = '#764ba2';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`H${i+1}`, layers.hidden[i].x, layers.hidden[i].y);
+                
+                ctx.font = '10px Arial';
+                ctx.fillText(network.hidden[i].toFixed(3), layers.hidden[i].x, layers.hidden[i].y + 35);
+            }
+            
+            // Dibujar nodo de salida
+            ctx.beginPath();
+            ctx.arc(layers.output[0].x, layers.output[0].y, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = `rgba(255, 152, 0, ${0.3 + network.output * 0.7})`;
+            ctx.fill();
+            ctx.strokeStyle = '#ff9800';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Y', layers.output[0].x, layers.output[0].y);
+            
+            ctx.font = '12px Arial';
+            ctx.fillText(network.output.toFixed(3), layers.output[0].x, layers.output[0].y + 45);
+        }
+        
+        // Actualizar valores
+        function updateNetwork() {
+            network.inputs[0] = parseFloat(document.getElementById('input1').value);
+            network.inputs[1] = parseFloat(document.getElementById('input2').value);
+            
+            // Actualizar algunos pesos desde los controles
+            network.weights.inputToHidden[0][0] = parseFloat(document.getElementById('w1').value);
+            network.weights.inputToHidden[1][1] = parseFloat(document.getElementById('w2').value);
+            network.bias.hidden[0] = parseFloat(document.getElementById('biasHidden').value);
+            network.bias.output = parseFloat(document.getElementById('biasOutput').value);
+            
+            forward();
+            drawNetwork();
+            
+            document.getElementById('prediction').textContent = network.output.toFixed(4);
+            document.getElementById('classification').textContent = network.output > 0.5 ? '1' : '0';
+        }
+        
+        // Event listeners
+        document.getElementById('input1').addEventListener('input', function() {
+            document.getElementById('input1Val').textContent = parseFloat(this.value).toFixed(2);
+            updateNetwork();
+        });
+        
+        document.getElementById('input2').addEventListener('input', function() {
+            document.getElementById('input2Val').textContent = parseFloat(this.value).toFixed(2);
+            updateNetwork();
+        });
+        
+        document.getElementById('w1').addEventListener('input', function() {
+            document.getElementById('w1Val').textContent = parseFloat(this.value).toFixed(1);
+            updateNetwork();
+        });
+        
+        document.getElementById('w2').addEventListener('input', function() {
+            document.getElementById('w2Val').textContent = parseFloat(this.value).toFixed(1);
+            updateNetwork();
+        });
+        
+        document.getElementById('biasHidden').addEventListener('input', function() {
+            document.getElementById('biasHiddenVal').textContent = parseFloat(this.value).toFixed(1);
+            updateNetwork();
+        });
+        
+        document.getElementById('biasOutput').addEventListener('input', function() {
+            document.getElementById('biasOutputVal').textContent = parseFloat(this.value).toFixed(1);
+            updateNetwork();
+        });
+        
+        // Funciones de los botones
+        function randomizeWeights() {
+            // Randomizar todos los pesos
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 4; j++) {
+                    network.weights.inputToHidden[i][j] = (Math.random() - 0.5) * 10;
+                }
+            }
+            for (let i = 0; i < 4; i++) {
+                network.weights.hiddenToOutput[i] = (Math.random() - 0.5) * 10;
+                network.bias.hidden[i] = (Math.random() - 0.5) * 10;
+            }
+            network.bias.output = (Math.random() - 0.5) * 10;
+            
+            // Actualizar controles visibles
+            document.getElementById('w1').value = network.weights.inputToHidden[0][0];
+            document.getElementById('w1Val').textContent = network.weights.inputToHidden[0][0].toFixed(1);
+            document.getElementById('w2').value = network.weights.inputToHidden[1][1];
+            document.getElementById('w2Val').textContent = network.weights.inputToHidden[1][1].toFixed(1);
+            document.getElementById('biasHidden').value = network.bias.hidden[0];
+            document.getElementById('biasHiddenVal').textContent = network.bias.hidden[0].toFixed(1);
+            document.getElementById('biasOutput').value = network.bias.output;
+            document.getElementById('biasOutputVal').textContent = network.bias.output.toFixed(1);
+            
+            updateNetwork();
+        }
+        
+        function trainNetwork() {
+            // Pesos preentrenados para XOR
+            network.weights.inputToHidden = [
+                [6, 6, -7, -7],
+                [6, -7, 6, -7]
+            ];
+            network.weights.hiddenToOutput = [7, -8, -8, 7];
+            network.bias.hidden = [-3, -10, -3, 10];
+            network.bias.output = -3;
+            
+            // Actualizar controles
+            document.getElementById('w1').value = network.weights.inputToHidden[0][0];
+            document.getElementById('w1Val').textContent = network.weights.inputToHidden[0][0].toFixed(1);
+            document.getElementById('w2').value = network.weights.inputToHidden[1][1];
+            document.getElementById('w2Val').textContent = network.weights.inputToHidden[1][1].toFixed(1);
+            document.getElementById('biasHidden').value = network.bias.hidden[0];
+            document.getElementById('biasHiddenVal').textContent = network.bias.hidden[0].toFixed(1);
+            document.getElementById('biasOutput').value = network.bias.output;
+            document.getElementById('biasOutputVal').textContent = network.bias.output.toFixed(1);
+            
+            updateNetwork();
+            alert('Red entrenada para XOR! Prueba: (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0');
+        }
+        
+        function testAllCases() {
+            const cases = [[0,0], [0,1], [1,0], [1,1]];
+            const expected = [0, 1, 1, 0];
+            let results = 'Resultados XOR:\n\n';
+            
+            for (let i = 0; i < cases.length; i++) {
+                network.inputs = cases[i];
+                forward();
+                const prediction = network.output > 0.5 ? 1 : 0;
+                const correct = prediction === expected[i] ? '✓' : '✗';
+                results += `(${cases[i][0]}, ${cases[i][1]}) → ${network.output.toFixed(3)} → ${prediction} ${correct}\n`;
+            }
+            
+            // Restaurar entradas actuales
+            network.inputs[0] = parseFloat(document.getElementById('input1').value);
+            network.inputs[1] = parseFloat(document.getElementById('input2').value);
+            updateNetwork();
+            
+            alert(results);
+        }
+        
+        // Inicializar
+        updateNetwork();
+    </script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-means Clustering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .button-group button {
+            margin-bottom: 0;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            color: #555;
+        }
+        
+        .visualization {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        .algorithm-status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #155724;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulsing {
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                padding: 15px;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            
+            .legend {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            canvas {
+                width: 100%;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>K-means Clustering</h1>
+        <p class="subtitle">Visualización interactiva del algoritmo de agrupamiento</p>
+        
+        <div class="main-content">
+            <div class="controls">
+                <div class="algorithm-status" id="status">
+                    Estado: Listo para iniciar
+                </div>
+                
+                <div class="control-group">
+                    <label>Número de clusters (K): <span id="kValue">3</span></label>
+                    <input type="range" id="kSlider" min="2" max="8" value="3">
+                </div>
+                
+                <div class="control-group">
+                    <label>Distribución de datos:</label>
+                    <select id="dataDistribution">
+                        <option value="random">Aleatorio uniforme</option>
+                        <option value="gaussian">Gaussianas separadas</option>
+                        <option value="rings">Anillos concéntricos</option>
+                        <option value="moons">Medias lunas</option>
+                        <option value="blobs">Grupos naturales</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Número de puntos: <span id="pointsValue">150</span></label>
+                    <input type="range" id="pointsSlider" min="50" max="500" value="150">
+                </div>
+                
+                <div class="control-group">
+                    <label>Velocidad de animación:</label>
+                    <select id="speed">
+                        <option value="1000">Lenta</option>
+                        <option value="500" selected>Normal</option>
+                        <option value="200">Rápida</option>
+                        <option value="50">Muy rápida</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Inicialización:</label>
+                    <select id="initMethod">
+                        <option value="random">Aleatoria</option>
+                        <option value="kmeans++">K-means++</option>
+                        <option value="manual">Manual (click en canvas)</option>
+                    </select>
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="generateData()">Generar Datos</button>
+                    <button onclick="initializeCentroids()">Inicializar</button>
+                </div>
+                
+                <button onclick="runKMeans()" id="runButton">Ejecutar K-means</button>
+                <button onclick="stepKMeans()" id="stepButton">Paso a Paso</button>
+                <button onclick="reset()">Reiniciar</button>
+                
+                <div class="info-box">
+                    <h3>Instrucciones:</h3>
+                    <p>
+                        1. Selecciona el número de clusters (K)<br>
+                        2. Genera datos con diferentes distribuciones<br>
+                        3. Inicializa los centroides<br>
+                        4. Ejecuta el algoritmo completo o paso a paso<br>
+                        5. En modo manual, haz click en el canvas para colocar centroides
+                    </p>
+                </div>
+            </div>
+            
+            <div class="visualization">
+                <canvas id="canvas" width="600" height="600"></canvas>
+                
+                <div class="legend" id="legend">
+                    <!-- Se generará dinámicamente -->
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Iteración</div>
+                        <div class="stat-value" id="iteration">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Inercia Total</div>
+                        <div class="stat-value" id="inertia">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Convergido</div>
+                        <div class="stat-value" id="converged">No</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Tiempo</div>
+                        <div class="stat-value" id="time">0ms</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Silhouette Score</div>
+                        <div class="stat-value" id="silhouette">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Variables globales
+        let data = [];
+        let centroids = [];
+        let assignments = [];
+        let k = 3;
+        let iteration = 0;
+        let running = false;
+        let converged = false;
+        let startTime = 0;
+        let manualMode = false;
+        let manualCentroids = [];
+        
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+            '#FECA57', '#FF9FF3', '#54A0FF', '#48DBFB'
+        ];
+        
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Event listeners
+        document.getElementById('kSlider').addEventListener('input', function(e) {
+            k = parseInt(e.target.value);
+            document.getElementById('kValue').textContent = k;
+            reset();
+        });
+        
+        document.getElementById('pointsSlider').addEventListener('input', function(e) {
+            document.getElementById('pointsValue').textContent = e.target.value;
+            generateData();
+        });
+        
+        document.getElementById('dataDistribution').addEventListener('change', generateData);
+        
+        document.getElementById('initMethod').addEventListener('change', function(e) {
+            manualMode = e.target.value === 'manual';
+            if (manualMode) {
+                manualCentroids = [];
+                updateStatus('Click en el canvas para colocar centroides');
+            }
+        });
+        
+        canvas.addEventListener('click', function(e) {
+            if (manualMode && manualCentroids.length < k) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / canvas.width;
+                const y = (e.clientY - rect.top) / canvas.height;
+                manualCentroids.push([x, y]);
+                
+                if (manualCentroids.length === k) {
+                    centroids = [...manualCentroids];
+                    updateStatus('Centroides colocados. Listo para ejecutar');
+                } else {
+                    updateStatus(`Coloca ${k - manualCentroids.length} centroides más`);
+                }
+                draw();
+            }
+        });
+        
+        // Inicialización
+        window.onload = function() {
+            generateData();
+            updateLegend();
+        };
+        
+        function generateData() {
+            try {
+                const numPoints = parseInt(document.getElementById('pointsSlider').value);
+                const distribution = document.getElementById('dataDistribution').value;
+                
+                if (numPoints < k) {
+                    throw new Error(`Se necesitan al menos ${k} puntos para ${k} clusters`);
+                }
+                
+                data = [];
+            
+            switch(distribution) {
+                case 'random':
+                    for (let i = 0; i < numPoints; i++) {
+                        data.push([Math.random(), Math.random()]);
+                    }
+                    break;
+                    
+                case 'gaussian':
+                    const numClusters = 3 + Math.floor(Math.random() * 3);
+                    const centers = [];
+                    for (let i = 0; i < numClusters; i++) {
+                        centers.push([Math.random() * 0.7 + 0.15, Math.random() * 0.7 + 0.15]);
+                    }
+                    
+                    for (let i = 0; i < numPoints; i++) {
+                        const center = centers[Math.floor(Math.random() * centers.length)];
+                        data.push([
+                            center[0] + gaussianRandom() * 0.1,
+                            center[1] + gaussianRandom() * 0.1
+                        ]);
+                    }
+                    break;
+                    
+                case 'rings':
+                    for (let i = 0; i < numPoints; i++) {
+                        const ring = Math.floor(Math.random() * 3);
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = (ring + 1) * 0.15 + (Math.random() - 0.5) * 0.05;
+                        data.push([
+                            0.5 + radius * Math.cos(angle),
+                            0.5 + radius * Math.sin(angle)
+                        ]);
+                    }
+                    break;
+                    
+                case 'moons':
+                    for (let i = 0; i < numPoints / 2; i++) {
+                        const angle = Math.random() * Math.PI;
+                        const radius = 0.3 + (Math.random() - 0.5) * 0.05;
+                        data.push([
+                            0.5 + radius * Math.cos(angle),
+                            0.3 + radius * Math.sin(angle)
+                        ]);
+                    }
+                    for (let i = 0; i < numPoints / 2; i++) {
+                        const angle = Math.random() * Math.PI + Math.PI;
+                        const radius = 0.3 + (Math.random() - 0.5) * 0.05;
+                        data.push([
+                            0.5 + radius * Math.cos(angle),
+                            0.7 + radius * Math.sin(angle)
+                        ]);
+                    }
+                    break;
+                    
+                case 'blobs':
+                    const blobCenters = [];
+                    for (let i = 0; i < k; i++) {
+                        blobCenters.push([
+                            Math.random() * 0.6 + 0.2,
+                            Math.random() * 0.6 + 0.2
+                        ]);
+                    }
+                    
+                    for (let i = 0; i < numPoints; i++) {
+                        const center = blobCenters[i % k];
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.abs(gaussianRandom() * 0.1);
+                        data.push([
+                            center[0] + radius * Math.cos(angle),
+                            center[1] + radius * Math.sin(angle)
+                        ]);
+                    }
+                    break;
+            }
+            
+            // Asegurar que los puntos estén dentro del rango [0, 1]
+            data = data.map(point => [
+                Math.max(0, Math.min(1, point[0])),
+                Math.max(0, Math.min(1, point[1]))
+            ]);
+            
+            reset();
+            draw();
+            } catch (error) {
+                console.error('Error generando datos:', error);
+                updateStatus(`Error: ${error.message}`);
+            }
+        }
+        
+        function initializeCentroids() {
+            const method = document.getElementById('initMethod').value;
+            
+            if (method === 'manual') {
+                manualCentroids = [];
+                updateStatus(`Click en el canvas para colocar ${k} centroides`);
+                return;
+            }
+            
+            centroids = [];
+            
+            if (method === 'random') {
+                // Inicialización aleatoria
+                const indices = [];
+                while (indices.length < k) {
+                    const idx = Math.floor(Math.random() * data.length);
+                    if (!indices.includes(idx)) {
+                        indices.push(idx);
+                        centroids.push([...data[idx]]);
+                    }
+                }
+            } else if (method === 'kmeans++') {
+                // K-means++ inicialización
+                centroids.push([...data[Math.floor(Math.random() * data.length)]]);
+                
+                for (let i = 1; i < k; i++) {
+                    const distances = data.map(point => {
+                        const minDist = Math.min(...centroids.map(c => distance(point, c)));
+                        return minDist * minDist;
+                    });
+                    
+                    const sum = distances.reduce((a, b) => a + b, 0);
+                    const probabilities = distances.map(d => d / sum);
+                    
+                    let cumSum = 0;
+                    const r = Math.random();
+                    for (let j = 0; j < probabilities.length; j++) {
+                        cumSum += probabilities[j];
+                        if (r < cumSum) {
+                            centroids.push([...data[j]]);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            updateStatus('Centroides inicializados');
+            draw();
+        }
+        
+        function assignToClusters() {
+            assignments = [];
+            let totalInertia = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                let minDist = Infinity;
+                let assignedCluster = 0;
+                
+                for (let j = 0; j < centroids.length; j++) {
+                    const dist = distance(data[i], centroids[j]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        assignedCluster = j;
+                    }
+                }
+                
+                assignments.push(assignedCluster);
+                totalInertia += minDist * minDist;
+            }
+            
+            document.getElementById('inertia').textContent = totalInertia.toFixed(2);
+            
+            // Calcular Silhouette Score (solo para datasets no muy grandes)
+            if (data.length < 1000) {
+                const silhouette = calculateSilhouetteScore();
+                document.getElementById('silhouette').textContent = silhouette.toFixed(3);
+            } else {
+                document.getElementById('silhouette').textContent = 'N/A';
+            }
+        }
+        
+        function updateCentroids() {
+            const newCentroids = [];
+            let moved = false;
+            const tolerance = 1e-6; // Mejor tolerancia para convergencia
+            
+            for (let i = 0; i < k; i++) {
+                const clusterPoints = [];
+                for (let j = 0; j < data.length; j++) {
+                    if (assignments[j] === i) {
+                        clusterPoints.push(data[j]);
+                    }
+                }
+                
+                if (clusterPoints.length > 0) {
+                    const newCentroid = [
+                        clusterPoints.reduce((sum, p) => sum + p[0], 0) / clusterPoints.length,
+                        clusterPoints.reduce((sum, p) => sum + p[1], 0) / clusterPoints.length
+                    ];
+                    
+                    // Usar mejor criterio de convergencia
+                    const movementDistance = distance(newCentroid, centroids[i]);
+                    if (movementDistance > tolerance) {
+                        moved = true;
+                    }
+                    
+                    newCentroids.push(newCentroid);
+                } else {
+                    // Si no hay puntos asignados, reinicializar aleatoriamente
+                    const randomCentroid = [Math.random(), Math.random()];
+                    newCentroids.push(randomCentroid);
+                    moved = true; // Forzar continuar si hay clusters vacíos
+                }
+            }
+            
+            centroids = newCentroids;
+            return !moved;
+        }
+        
+        function stepKMeans() {
+            if (centroids.length === 0) {
+                alert('Primero inicializa los centroides');
+                return;
+            }
+            
+            if (converged) {
+                updateStatus('El algoritmo ha convergido');
+                return;
+            }
+            
+            if (iteration === 0) {
+                startTime = Date.now();
+            }
+            
+            // Paso 1: Asignar puntos a clusters
+            assignToClusters();
+            draw();
+            
+            setTimeout(() => {
+                // Paso 2: Actualizar centroides
+                converged = updateCentroids();
+                iteration++;
+                
+                document.getElementById('iteration').textContent = iteration;
+                document.getElementById('converged').textContent = converged ? 'Sí' : 'No';
+                document.getElementById('time').textContent = (Date.now() - startTime) + 'ms';
+                
+                if (converged) {
+                    updateStatus('¡Convergencia alcanzada!');
+                } else {
+                    updateStatus(`Iteración ${iteration} completada`);
+                }
+                
+                draw();
+            }, parseInt(document.getElementById('speed').value) / 2);
+        }
+        
+        async function runKMeans() {
+            try {
+                if (data.length === 0) {
+                    throw new Error('No hay datos generados. Genera datos primero.');
+                }
+                
+                if (centroids.length === 0) {
+                    throw new Error('Primero inicializa los centroides');
+                }
+                
+                if (running) return;
+            
+            running = true;
+            converged = false;
+            iteration = 0;
+            startTime = Date.now();
+            
+            document.getElementById('runButton').disabled = true;
+            document.getElementById('stepButton').disabled = true;
+            
+            while (!converged && iteration < 100) {
+                assignToClusters();
+                draw();
+                
+                await sleep(parseInt(document.getElementById('speed').value));
+                
+                converged = updateCentroids();
+                iteration++;
+                
+                document.getElementById('iteration').textContent = iteration;
+                document.getElementById('converged').textContent = converged ? 'Sí' : 'No';
+                document.getElementById('time').textContent = (Date.now() - startTime) + 'ms';
+                
+                draw();
+                
+                if (!converged) {
+                    await sleep(parseInt(document.getElementById('speed').value));
+                }
+            }
+            
+            running = false;
+            document.getElementById('runButton').disabled = false;
+            document.getElementById('stepButton').disabled = false;
+            
+            if (converged) {
+                updateStatus('¡Convergencia alcanzada!');
+            } else {
+                updateStatus('Máximo de iteraciones alcanzado');
+            }
+            } catch (error) {
+                console.error('Error en K-means:', error);
+                updateStatus(`Error: ${error.message}`);
+                running = false;
+                document.getElementById('runButton').disabled = false;
+                document.getElementById('stepButton').disabled = false;
+            }
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Dibujar grid (opcional para datasets grandes)
+            if (data.length < 1000) {
+                ctx.strokeStyle = '#f0f0f0';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * canvas.width / 10, 0);
+                    ctx.lineTo(i * canvas.width / 10, canvas.height);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * canvas.height / 10);
+                    ctx.lineTo(canvas.width, i * canvas.height / 10);
+                    ctx.stroke();
+                }
+            }
+            
+            // Dibujar puntos
+            for (let i = 0; i < data.length; i++) {
+                const x = data[i][0] * canvas.width;
+                const y = data[i][1] * canvas.height;
+                
+                ctx.fillStyle = assignments[i] !== undefined ? 
+                    colors[assignments[i]] + '88' : '#999999';
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (assignments[i] !== undefined) {
+                    ctx.strokeStyle = colors[assignments[i]];
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            
+            // Dibujar líneas de puntos a centroides (solo para datasets pequeños)
+            if (assignments.length > 0 && data.length < 200 && document.getElementById('initMethod').value !== 'manual') {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < data.length; i++) {
+                    if (assignments[i] !== undefined && centroids[assignments[i]]) {
+                        ctx.beginPath();
+                        ctx.moveTo(data[i][0] * canvas.width, data[i][1] * canvas.height);
+                        ctx.lineTo(
+                            centroids[assignments[i]][0] * canvas.width,
+                            centroids[assignments[i]][1] * canvas.height
+                        );
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Dibujar centroides
+            for (let i = 0; i < centroids.length; i++) {
+                const x = centroids[i][0] * canvas.width;
+                const y = centroids[i][1] * canvas.height;
+                
+                // Círculo exterior
+                ctx.fillStyle = colors[i];
+                ctx.beginPath();
+                ctx.arc(x, y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Círculo interior blanco
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Cruz central
+                ctx.strokeStyle = colors[i];
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x - 6, y);
+                ctx.lineTo(x + 6, y);
+                ctx.moveTo(x, y - 6);
+                ctx.lineTo(x, y + 6);
+                ctx.stroke();
+            }
+            
+            // Dibujar centroides manuales pendientes
+            if (manualMode) {
+                for (let i = 0; i < manualCentroids.length; i++) {
+                    const x = manualCentroids[i][0] * canvas.width;
+                    const y = manualCentroids[i][1] * canvas.height;
+                    
+                    ctx.fillStyle = colors[i];
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = colors[i];
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x - 6, y);
+                    ctx.lineTo(x + 6, y);
+                    ctx.moveTo(x, y - 6);
+                    ctx.lineTo(x, y + 6);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        function reset() {
+            centroids = [];
+            assignments = [];
+            iteration = 0;
+            converged = false;
+            running = false;
+            manualCentroids = [];
+            
+            document.getElementById('iteration').textContent = '0';
+            document.getElementById('inertia').textContent = '-';
+            document.getElementById('converged').textContent = 'No';
+            document.getElementById('time').textContent = '0ms';
+            document.getElementById('silhouette').textContent = '-';
+            document.getElementById('runButton').disabled = false;
+            document.getElementById('stepButton').disabled = false;
+            
+            updateStatus('Reiniciado. Listo para comenzar');
+            draw();
+        }
+        
+        function updateStatus(message) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = `Estado: ${message}`;
+            statusEl.classList.add('pulsing');
+            setTimeout(() => statusEl.classList.remove('pulsing'), 500);
+        }
+        
+        function updateLegend() {
+            const legendEl = document.getElementById('legend');
+            legendEl.innerHTML = '';
+            
+            for (let i = 0; i < k; i++) {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                
+                const color = document.createElement('div');
+                color.className = 'legend-color';
+                color.style.backgroundColor = colors[i];
+                
+                const label = document.createElement('span');
+                label.textContent = `Cluster ${i + 1}`;
+                
+                item.appendChild(color);
+                item.appendChild(label);
+                legendEl.appendChild(item);
+            }
+        }
+        
+        // Funciones auxiliares
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+        }
+        
+        function gaussianRandom() {
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+        
+        function calculateSilhouetteScore() {
+            if (assignments.length === 0 || centroids.length < 2) return 0;
+            
+            let totalScore = 0;
+            let validPoints = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                const cluster = assignments[i];
+                
+                // Calcular distancia promedio intra-cluster (a)
+                let intraClusterDist = 0;
+                let intraCount = 0;
+                
+                for (let j = 0; j < data.length; j++) {
+                    if (i !== j && assignments[j] === cluster) {
+                        intraClusterDist += distance(data[i], data[j]);
+                        intraCount++;
+                    }
+                }
+                
+                if (intraCount === 0) continue; // Punto aislado en su cluster
+                
+                const a = intraClusterDist / intraCount;
+                
+                // Calcular distancia promedio inter-cluster mínima (b)
+                let minInterClusterDist = Infinity;
+                
+                for (let c = 0; c < k; c++) {
+                    if (c === cluster) continue;
+                    
+                    let interClusterDist = 0;
+                    let interCount = 0;
+                    
+                    for (let j = 0; j < data.length; j++) {
+                        if (assignments[j] === c) {
+                            interClusterDist += distance(data[i], data[j]);
+                            interCount++;
+                        }
+                    }
+                    
+                    if (interCount > 0) {
+                        minInterClusterDist = Math.min(minInterClusterDist, interClusterDist / interCount);
+                    }
+                }
+                
+                if (minInterClusterDist === Infinity) continue;
+                
+                const b = minInterClusterDist;
+                const s = (b - a) / Math.max(a, b);
+                
+                totalScore += s;
+                validPoints++;
+            }
+            
+            return validPoints > 0 ? totalScore / validPoints : 0;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Actualizar leyenda cuando cambia K
+        document.getElementById('kSlider').addEventListener('input', updateLegend);
+    </script>
+</body>
+</html>
