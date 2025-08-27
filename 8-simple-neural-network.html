@@ -331,16 +331,18 @@
         
         // Forward propagation
         function forward() {
+            const activationType = document.getElementById('activation').value;
+            
             // Capa oculta
             for (let i = 0; i < 4; i++) {
                 let sum = network.bias.hidden[i];
                 for (let j = 0; j < 2; j++) {
                     sum += network.inputs[j] * network.weights.inputToHidden[j][i];
                 }
-                network.hidden[i] = sigmoid(sum);
+                network.hidden[i] = activate(sum, activationType);
             }
             
-            // Capa de salida
+            // Capa de salida (siempre sigmoid para XOR)
             let sum = network.bias.output;
             for (let i = 0; i < 4; i++) {
                 sum += network.hidden[i] * network.weights.hiddenToOutput[i];
@@ -454,12 +456,6 @@
             network.inputs[0] = parseFloat(document.getElementById('input1').value);
             network.inputs[1] = parseFloat(document.getElementById('input2').value);
             
-            // Actualizar algunos pesos desde los controles
-            network.weights.inputToHidden[0][0] = parseFloat(document.getElementById('w1').value);
-            network.weights.inputToHidden[1][1] = parseFloat(document.getElementById('w2').value);
-            network.bias.hidden[0] = parseFloat(document.getElementById('biasHidden').value);
-            network.bias.output = parseFloat(document.getElementById('biasOutput').value);
-            
             forward();
             drawNetwork();
             
@@ -478,23 +474,16 @@
             updateNetwork();
         });
         
-        document.getElementById('w1').addEventListener('input', function() {
-            document.getElementById('w1Val').textContent = parseFloat(this.value).toFixed(1);
-            updateNetwork();
+        
+        document.getElementById('learningRate').addEventListener('input', function() {
+            document.getElementById('learningRateVal').textContent = parseFloat(this.value).toFixed(2);
         });
         
-        document.getElementById('w2').addEventListener('input', function() {
-            document.getElementById('w2Val').textContent = parseFloat(this.value).toFixed(1);
-            updateNetwork();
+        document.getElementById('epochs').addEventListener('input', function() {
+            document.getElementById('epochsVal').textContent = this.value;
         });
         
-        document.getElementById('biasHidden').addEventListener('input', function() {
-            document.getElementById('biasHiddenVal').textContent = parseFloat(this.value).toFixed(1);
-            updateNetwork();
-        });
-        
-        document.getElementById('biasOutput').addEventListener('input', function() {
-            document.getElementById('biasOutputVal').textContent = parseFloat(this.value).toFixed(1);
+        document.getElementById('activation').addEventListener('change', function() {
             updateNetwork();
         });
         
@@ -503,50 +492,103 @@
             // Randomizar todos los pesos
             for (let i = 0; i < 2; i++) {
                 for (let j = 0; j < 4; j++) {
-                    network.weights.inputToHidden[i][j] = (Math.random() - 0.5) * 10;
+                    network.weights.inputToHidden[i][j] = (Math.random() - 0.5) * 4;
                 }
             }
             for (let i = 0; i < 4; i++) {
-                network.weights.hiddenToOutput[i] = (Math.random() - 0.5) * 10;
-                network.bias.hidden[i] = (Math.random() - 0.5) * 10;
+                network.weights.hiddenToOutput[i] = (Math.random() - 0.5) * 4;
+                network.bias.hidden[i] = (Math.random() - 0.5) * 4;
             }
-            network.bias.output = (Math.random() - 0.5) * 10;
+            network.bias.output = (Math.random() - 0.5) * 2;
             
-            // Actualizar controles visibles
-            document.getElementById('w1').value = network.weights.inputToHidden[0][0];
-            document.getElementById('w1Val').textContent = network.weights.inputToHidden[0][0].toFixed(1);
-            document.getElementById('w2').value = network.weights.inputToHidden[1][1];
-            document.getElementById('w2Val').textContent = network.weights.inputToHidden[1][1].toFixed(1);
-            document.getElementById('biasHidden').value = network.bias.hidden[0];
-            document.getElementById('biasHiddenVal').textContent = network.bias.hidden[0].toFixed(1);
-            document.getElementById('biasOutput').value = network.bias.output;
-            document.getElementById('biasOutputVal').textContent = network.bias.output.toFixed(1);
-            
+            document.getElementById('currentError').textContent = '-';
             updateNetwork();
         }
         
-        function trainNetwork() {
-            // Pesos preentrenados para XOR
-            network.weights.inputToHidden = [
-                [6, 6, -7, -7],
-                [6, -7, 6, -7]
+        async function trainNetworkReal() {
+            const learningRate = parseFloat(document.getElementById('learningRate').value);
+            const epochs = parseInt(document.getElementById('epochs').value);
+            const activationType = document.getElementById('activation').value;
+            
+            // Dataset XOR
+            const dataset = [
+                {input: [0, 0], target: [0]},
+                {input: [0, 1], target: [1]},
+                {input: [1, 0], target: [1]},
+                {input: [1, 1], target: [0]}
             ];
-            network.weights.hiddenToOutput = [7, -8, -8, 7];
-            network.bias.hidden = [-3, -10, -3, 10];
-            network.bias.output = -3;
             
-            // Actualizar controles
-            document.getElementById('w1').value = network.weights.inputToHidden[0][0];
-            document.getElementById('w1Val').textContent = network.weights.inputToHidden[0][0].toFixed(1);
-            document.getElementById('w2').value = network.weights.inputToHidden[1][1];
-            document.getElementById('w2Val').textContent = network.weights.inputToHidden[1][1].toFixed(1);
-            document.getElementById('biasHidden').value = network.bias.hidden[0];
-            document.getElementById('biasHiddenVal').textContent = network.bias.hidden[0].toFixed(1);
-            document.getElementById('biasOutput').value = network.bias.output;
-            document.getElementById('biasOutputVal').textContent = network.bias.output.toFixed(1);
+            let totalError = 0;
             
+            for (let epoch = 0; epoch < epochs; epoch++) {
+                totalError = 0;
+                
+                for (let sample of dataset) {
+                    // Forward pass
+                    network.inputs = sample.input;
+                    
+                    // Calcular activaciones con valores intermedios para derivadas
+                    const hiddenSums = [];
+                    for (let i = 0; i < 4; i++) {
+                        let sum = network.bias.hidden[i];
+                        for (let j = 0; j < 2; j++) {
+                            sum += network.inputs[j] * network.weights.inputToHidden[j][i];
+                        }
+                        hiddenSums[i] = sum;
+                        network.hidden[i] = activate(sum, activationType);
+                    }
+                    
+                    let outputSum = network.bias.output;
+                    for (let i = 0; i < 4; i++) {
+                        outputSum += network.hidden[i] * network.weights.hiddenToOutput[i];
+                    }
+                    network.output = sigmoid(outputSum);
+                    
+                    // Calcular error
+                    const error = sample.target[0] - network.output;
+                    totalError += error * error;
+                    
+                    // Backpropagation
+                    // Error de salida
+                    const outputDelta = error * sigmoidDerivative(outputSum);
+                    
+                    // Actualizar pesos hidden -> output
+                    for (let i = 0; i < 4; i++) {
+                        network.weights.hiddenToOutput[i] += learningRate * outputDelta * network.hidden[i];
+                    }
+                    network.bias.output += learningRate * outputDelta;
+                    
+                    // Error de capa oculta
+                    const hiddenDeltas = [];
+                    for (let i = 0; i < 4; i++) {
+                        const hiddenError = outputDelta * network.weights.hiddenToOutput[i];
+                        hiddenDeltas[i] = hiddenError * activateDerivative(hiddenSums[i], activationType);
+                    }
+                    
+                    // Actualizar pesos input -> hidden
+                    for (let i = 0; i < 2; i++) {
+                        for (let j = 0; j < 4; j++) {
+                            network.weights.inputToHidden[i][j] += learningRate * hiddenDeltas[j] * network.inputs[i];
+                        }
+                    }
+                    
+                    // Actualizar bias de capa oculta
+                    for (let i = 0; i < 4; i++) {
+                        network.bias.hidden[i] += learningRate * hiddenDeltas[i];
+                    }
+                }
+                
+                // Mostrar progreso cada 100 épocas
+                if (epoch % 100 === 0) {
+                    document.getElementById('currentError').textContent = (totalError / 4).toFixed(6);
+                    updateNetwork();
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+            
+            document.getElementById('currentError').textContent = (totalError / 4).toFixed(6);
             updateNetwork();
-            alert('Red entrenada para XOR! Prueba: (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0');
+            alert(`Entrenamiento completado! Error final: ${(totalError / 4).toFixed(6)}`);
         }
         
         function testAllCases() {
