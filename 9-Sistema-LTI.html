@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema LTI: Filtro Paso Bajo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .system-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 40px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .signal-box {
+            text-align: center;
+            flex: 1;
+            margin: 0 20px;
+        }
+        
+        .signal-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .signal-canvas {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .arrow {
+            font-size: 3em;
+            color: #007bff;
+            margin: 0 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .system-block {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+            border: 3px solid #1e7e34;
+            min-width: 200px;
+        }
+        
+        .system-block .title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .system-block .subtitle {
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: normal;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .control-group input {
+            width: 120px;
+            padding: 8px;
+            border: 2px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .parameters {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .parameters h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .param-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+        
+        .explanation {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .explanation h3 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .system-diagram {
+                flex-direction: column;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+                margin: 15px 0;
+            }
+            
+            .signal-box {
+                margin: 15px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema LTI: Filtro Paso Bajo</h1>
+        
+        <div class="system-diagram">
+            <div class="signal-box">
+                <div class="signal-title">ENTRADA<br>Onda Senoidal</div>
+                <canvas id="inputCanvas" class="signal-canvas" width="250" height="150"></canvas>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="system-block">
+                <div class="title">SISTEMA LTI</div>
+                <div class="subtitle">Filtro Paso Bajo</div>
+                <div class="subtitle">H(ω) = 1/(1+jωτ)</div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <div class="signal-box">
+                <div class="signal-title">SALIDA<br>Senoidal Atenuada</div>
+                <canvas id="outputCanvas" class="signal-canvas" width="250" height="150"></canvas>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="frequency">Frecuencia de Entrada (Hz)</label>
+                <input type="range" id="frequency" min="0.1" max="5" step="0.1" value="1">
+                <span id="freqValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="cutoff">Frecuencia de Corte (Hz)</label>
+                <input type="range" id="cutoff" min="0.5" max="3" step="0.1" value="1.5">
+                <span id="cutoffValue">1.5</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="amplitude">Amplitud de Entrada</label>
+                <input type="range" id="amplitude" min="0.5" max="2" step="0.1" value="1">
+                <span id="ampValue">1.0</span>
+            </div>
+        </div>
+        
+        <div class="parameters">
+            <h3>Parámetros del Sistema</h3>
+            <div class="param-grid">
+                <div class="param-item">
+                    <strong>Frecuencia de entrada:</strong><br>
+                    <span id="inputFreq">1.0 Hz</span>
+                </div>
+                <div class="param-item">
+                    <strong>Amplitud de entrada:</strong><br>
+                    <span id="inputAmp">1.0</span>
+                </div>
+                <div class="param-item">
+                    <strong>Frecuencia de corte:</strong><br>
+                    <span id="filterCutoff">1.5 Hz</span>
+                </div>
+                <div class="param-item">
+                    <strong>Factor de atenuación:</strong><br>
+                    <span id="attenuation">0.85</span>
+                </div>
+                <div class="param-item">
+                    <strong>Desfase:</strong><br>
+                    <span id="phaseShift">-28°</span>
+                </div>
+                <div class="param-item">
+                    <strong>Respuesta en frecuencia:</strong><br>
+                    <span id="freqResponse">|H(ω)| = 0.85</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="explanation">
+            <h3>Comportamiento del Filtro Paso Bajo</h3>
+            <p><strong>Principio:</strong> Un filtro paso bajo permite el paso de frecuencias por debajo de su frecuencia de corte y atenúa las frecuencias superiores.</p>
+            
+            <p><strong>Efecto observable:</strong></p>
+            <ul>
+                <li>Cuando f_entrada < f_corte: La señal pasa con poca atenuación</li>
+                <li>Cuando f_entrada > f_corte: La señal se atenúa significativamente</li>
+                <li>Siempre hay un desfase entre entrada y salida</li>
+            </ul>
+            
+            <p><strong>Función de transferencia:</strong> H(ω) = 1/(1 + jωτ), donde τ = 1/(2πf_c)</p>
+        </div>
+    </div>
+
+    <script>
+        const inputCanvas = document.getElementById('inputCanvas');
+        const outputCanvas = document.getElementById('outputCanvas');
+        const inputCtx = inputCanvas.getContext('2d');
+        const outputCtx = outputCanvas.getContext('2d');
+        
+        const frequencySlider = document.getElementById('frequency');
+        const cutoffSlider = document.getElementById('cutoff');
+        const amplitudeSlider = document.getElementById('amplitude');
+        
+        let animationId;
+        let time = 0;
+        
+        function updateValues() {
+            const freq = parseFloat(frequencySlider.value);
+            const cutoff = parseFloat(cutoffSlider.value);
+            const amp = parseFloat(amplitudeSlider.value);
+            
+            document.getElementById('freqValue').textContent = freq.toFixed(1);
+            document.getElementById('cutoffValue').textContent = cutoff.toFixed(1);
+            document.getElementById('ampValue').textContent = amp.toFixed(1);
+            
+            // Calcular parámetros del filtro
+            const tau = 1 / (2 * Math.PI * cutoff);
+            const omega = 2 * Math.PI * freq;
+            const magnitude = 1 / Math.sqrt(1 + Math.pow(omega * tau, 2));
+            const phase = -Math.atan(omega * tau) * 180 / Math.PI;
+            
+            document.getElementById('inputFreq').textContent = freq.toFixed(1) + ' Hz';
+            document.getElementById('inputAmp').textContent = amp.toFixed(1);
+            document.getElementById('filterCutoff').textContent = cutoff.toFixed(1) + ' Hz';
+            document.getElementById('attenuation').textContent = magnitude.toFixed(2);
+            document.getElementById('phaseShift').textContent = phase.toFixed(0) + '°';
+            document.getElementById('freqResponse').textContent = '|H(ω)| = ' + magnitude.toFixed(2);
+        }
+        
+        function drawSignal(ctx, canvas, amplitude, frequency, phase = 0, color = '#007bff') {
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerY = height / 2;
+            const scale = 50; // escala de amplitud
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Dibujar ejes
+            ctx.strokeStyle = '#dee2e6';
+            ctx.lineWidth = 1;
+            
+            // Eje horizontal
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(width, centerY);
+            ctx.stroke();
+            
+            // Líneas de cuadrícula
+            for (let i = 0; i < width; i += 25) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i < height; i += 25) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(width, i);
+                ctx.stroke();
+            }
+            
+            // Dibujar señal
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let x = 0; x < width; x++) {
+                const t = (x / width) * 4 + time; // 4 segundos de señal
+                const y = centerY - amplitude * scale * Math.sin(2 * Math.PI * frequency * t + phase);
+                
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Etiquetas
+            ctx.fillStyle = '#495057';
+            ctx.font = '12px Arial';
+            ctx.fillText('A = ' + amplitude.toFixed(1), 5, 15);
+            ctx.fillText('f = ' + frequency.toFixed(1) + ' Hz', 5, 30);
+        }
+        
+        function animate() {
+            const freq = parseFloat(frequencySlider.value);
+            const cutoff = parseFloat(cutoffSlider.value);
+            const amp = parseFloat(amplitudeSlider.value);
+            
+            // Calcular respuesta del filtro
+            const tau = 1 / (2 * Math.PI * cutoff);
+            const omega = 2 * Math.PI * freq;
+            const magnitude = 1 / Math.sqrt(1 + Math.pow(omega * tau, 2));
+            const phase = -Math.atan(omega * tau);
+            
+            const outputAmp = amp * magnitude;
+            
+            // Dibujar señales
+            drawSignal(inputCtx, inputCanvas, amp, freq, 0, '#007bff');
+            drawSignal(outputCtx, outputCanvas, outputAmp, freq, phase, '#28a745');
+            
+            time += 0.02;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        frequencySlider.addEventListener('input', updateValues);
+        cutoffSlider.addEventListener('input', updateValues);
+        amplitudeSlider.addEventListener('input', updateValues);
+        
+        // Inicializar
+        updateValues();
+        animate();
+    </script>
+</body>
+</html>
