@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regla de Mason - Lazos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .diagram {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fafafa;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .loop-explanation {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            background: #e3f2fd;
+        }
+        .formula {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        h2 {
+            color: #1976d2;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 5px;
+        }
+        .highlight {
+            background: yellow;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        svg {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .path {
+            stroke-width: 2;
+            fill: none;
+        }
+        .arrow {
+            marker-end: url(#arrowhead);
+        }
+        .node {
+            fill: #1976d2;
+            stroke: white;
+            stroke-width: 2;
+        }
+        .gain {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            fill: #333;
+        }
+        .loop1 { stroke: #f44336; }
+        .loop2 { stroke: #4caf50; }
+        .loop3 { stroke: #ff9800; }
+        .forward { stroke: #9c27b0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Regla de Mason - Identificación de Lazos</h1>
+        
+        <div class="diagram">
+            <h2>Sistema de Control con Múltiples Lazos</h2>
+            <svg width="800" height="300" viewBox="0 0 800 300">
+                <!-- Definir marcadores de flecha -->
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                     refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+                    </marker>
+                </defs>
+                
+                <!-- Nodos -->
+                <circle cx="50" cy="150" r="8" class="node"/>
+                <circle cx="200" cy="150" r="8" class="node"/>
+                <circle cx="400" cy="150" r="8" class="node"/>
+                <circle cx="600" cy="150" r="8" class="node"/>
+                <circle cx="750" cy="150" r="8" class="node"/>
+                <circle cx="400" cy="80" r="8" class="node"/>
+                
+                <!-- Etiquetas de nodos -->
+                <text x="30" y="140" class="gain">X(s)</text>
+                <text x="185" y="140" class="gain">A</text>
+                <text x="385" y="140" class="gain">B</text>
+                <text x="585" y="140" class="gain">C</text>
+                <text x="730" y="140" class="gain">Y(s)</text>
+                <text x="385" y="70" class="gain">D</text>
+                
+                <!-- Camino directo -->
+                <path d="M 58 150 L 192 150" class="path forward arrow"/>
+                <path d="M 208 150 L 392 150" class="path forward arrow"/>
+                <path d="M 408 150 L 592 150" class="path forward arrow"/>
+                <path d="M 608 150 L 742 150" class="path forward arrow"/>
+                
+                <!-- Rama hacia arriba -->
+                <path d="M 400 142 L 400 88" class="path forward arrow"/>
+                
+                <!-- Ganancias del camino directo -->
+                <text x="110" y="140" class="gain">G₁</text>
+                <text x="290" y="140" class="gain">G₂</text>
+                <text x="490" y="140" class="gain">G₃</text>
+                <text x="670" y="140" class="gain">G₄</text>
+                <text x="410" y="115" class="gain">G₅</text>
+                
+                <!-- LAZO 1: B → C → B -->
+                <path d="M 408 158 Q 500 200 592 158" class="path loop1 arrow"/>
+                <text x="500" y="190" class="gain" fill="#f44336">H₁</text>
+                
+                <!-- LAZO 2: A → B → D → A -->
+                <path d="M 208 142 Q 300 50 392 88 Q 300 50 208 142" class="path loop2 arrow"/>
+                <text x="250" y="40" class="gain" fill="#4caf50">H₂</text>
+                <text x="350" y="40" class="gain" fill="#4caf50">H₃</text>
+                
+                <!-- LAZO 3: A → B → C → A (lazo grande) -->
+                <path d="M 208 158 Q 300 220 400 220 Q 500 220 592 158 Q 500 250 300 250 Q 200 250 208 158" class="path loop3 arrow"/>
+                <text x="400" y="240" class="gain" fill="#ff9800">H₄</text>
+            </svg>
+        </div>
+
+        <div class="loop-explanation">
+            <h2>Identificación de Lazos:</h2>
+            
+            <h3>🔴 Lazo L₁ (Rojo):</h3>
+            <p><strong>Camino:</strong> B → C → B</p>
+            <p><strong>Ganancia:</strong> L₁ = -G₃ × H₁</p>
+            <p><strong>Elementos:</strong> Nodos B, C y ramas G₃, H₁</p>
+            
+            <h3>🟢 Lazo L₂ (Verde):</h3>
+            <p><strong>Camino:</strong> A → B → D → A</p>
+            <p><strong>Ganancia:</strong> L₂ = -G₂ × G₅ × H₂ × H₃</p>
+            <p><strong>Elementos:</strong> Nodos A, B, D y ramas G₂, G₅, H₂, H₃</p>
+            
+            <h3>🟠 Lazo L₃ (Naranja):</h3>
+            <p><strong>Camino:</strong> A → B → C → A</p>
+            <p><strong>Ganancia:</strong> L₃ = -G₂ × G₃ × H₄</p>
+            <p><strong>Elementos:</strong> Nodos A, B, C y ramas G₂, G₃, H₄</p>
+        </div>
+
+        <div class="loop-explanation">
+            <h2>Análisis de Interacciones:</h2>
+            
+            <h3>Lazos que SE TOCAN:</h3>
+            <ul>
+                <li><strong>L₁ y L₃:</strong> Comparten nodos B y C, y rama G₃</li>
+                <li><strong>L₂ y L₃:</strong> Comparten nodos A y B, y rama G₂</li>
+            </ul>
+            
+            <h3>Lazos que NO SE TOCAN:</h3>
+            <ul>
+                <li><strong>L₁ y L₂:</strong> No comparten nodos ni ramas</li>
+            </ul>
+        </div>
+
+        <div class="formula">
+            <h2>Cálculo del Determinante Δ:</h2>
+            <p><strong>Δ = 1 - Σ(Li) + Σ(LiLj que no se tocan) - Σ(LiLjLk que no se tocan) + ...</strong></p>
+            <br>
+            <p>Δ = 1 - (L₁ + L₂ + L₃) + (L₁L₂) - 0 + ...</p>
+            <br>
+            <p>Δ = 1 - (L₁ + L₂ + L₃) + (L₁L₂)</p>
+            <br>
+            <p class="highlight">Solo L₁L₂ sobrevive porque son los únicos lazos que no se tocan</p>
+        </div>
+
+        <div class="loop-explanation">
+            <h2>Reglas Clave:</h2>
+            <ul>
+                <li><strong>Lazo:</strong> Cualquier camino cerrado que regresa al mismo nodo</li>
+                <li><strong>Se tocan:</strong> Si comparten al menos un nodo o una rama</li>
+                <li><strong>No se tocan:</strong> Si son completamente independientes</li>
+                <li><strong>Ganancia negativa:</strong> Por la naturaleza de la realimentación</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

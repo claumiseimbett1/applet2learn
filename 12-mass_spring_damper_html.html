@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Masa-Resorte-Amortiguador</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 300px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .panel h2 {
+            color: #334155;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .param-group {
+            margin-bottom: 15px;
+        }
+        
+        .param-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .param-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .param-group select, .param-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .info-box h3 {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            color: #1e40af;
+        }
+        
+        .transfer-function {
+            font-family: monospace;
+            font-size: 0.8em;
+            background: #f1f5f9;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        
+        .params-list {
+            font-size: 0.85em;
+        }
+        
+        .params-list p {
+            margin: 3px 0;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            height: 400px;
+        }
+        
+        .chart-full {
+            grid-column: span 3;
+            height: 300px;
+        }
+        
+        .value-display {
+            color: #059669;
+            font-weight: bold;
+        }
+        
+        .help-text {
+            font-size: 0.75em;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .damping-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .subamortiguado { background: #fecaca; color: #991b1b; }
+        .critico { background: #fde68a; color: #92400e; }
+        .sobreamortiguado { background: #bbf7d0; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema Masa-Resorte-Amortiguador</h1>
+        
+        <div class="main-grid">
+            <!-- Panel de parámetros del sistema -->
+            <div class="panel">
+                <h2>Parámetros del Sistema</h2>
+                
+                <div class="param-group">
+                    <label>Masa (m): <span id="massValue" class="value-display">1.0</span> kg</label>
+                    <input type="range" id="mass" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+                
+                <div class="param-group">
+                    <label>Amortiguamiento (c): <span id="dampingValue" class="value-display">0.5</span> Ns/m</label>
+                    <input type="range" id="damping" min="0" max="3" step="0.1" value="0.5">
+                </div>
+                
+                <div class="param-group">
+                    <label>Rigidez (k): <span id="stiffnessValue" class="value-display">4.0</span> N/m</label>
+                    <input type="range" id="stiffness" min="0.1" max="10" step="0.1" value="4.0">
+                </div>
+                
+                <h2 style="margin-top: 20px;">Entrada</h2>
+                
+                <div class="param-group">
+                    <label>Tipo de entrada:</label>
+                    <select id="inputType">
+                        <option value="impulse">Impulso</option>
+                        <option value="step" selected>Escalón</option>
+                        <option value="sine">Senoidal</option>
+                        <option value="resonance">Resonancia (ωn)</option>
+                        <option value="custom">Personalizada</option>
+                    </select>
+                </div>
+                
+                <div class="param-group">
+                    <label>Amplitud: <span id="amplitudeValue" class="value-display">1.0</span></label>
+                    <input type="range" id="amplitude" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+                
+                <div class="param-group" id="frequencyGroup" style="display: none;">
+                    <label>Frecuencia: <span id="frequencyValue" class="value-display">1.0</span> Hz</label>
+                    <input type="range" id="frequency" min="0.1" max="3" step="0.1" value="1.0">
+                </div>
+                
+                <div class="param-group" id="customGroup" style="display: none;">
+                    <label>Función f(t):</label>
+                    <input type="text" id="customFunction" value="sin(2*t)" placeholder="ej: sin(2*t) + 0.5*cos(t)">
+                    <div class="help-text">Usa: sin, cos, exp, *, +, -, /, ^, t</div>
+                </div>
+                
+                <div class="param-group">
+                    <label>Tiempo: <span id="timeValue" class="value-display">10</span> s</label>
+                    <input type="range" id="timeEnd" min="5" max="20" step="1" value="10">
+                </div>
+            </div>
+            
+            <!-- Panel de análisis -->
+            <div class="panel">
+                <h2>Análisis del Sistema</h2>
+                
+                <div class="info-box">
+                    <h3>Función de Transferencia</h3>
+                    <div id="transferFunction" class="transfer-function"></div>
+                </div>
+                
+                <div class="info-box">
+                    <h3>Parámetros Característicos</h3>
+                    <div id="systemParams" class="params-list"></div>
+                </div>
+                
+                <div class="info-box">
+                    <h3>Información</h3>
+                    <div class="params-list">
+                        <p><strong>ζ &lt; 1:</strong> Subamortiguado (oscilatorio)</p>
+                        <p><strong>ζ = 1:</strong> Críticamente amortiguado</p>
+                        <p><strong>ζ &gt; 1:</strong> Sobreamortiguado</p>
+                        <p><strong>Resonancia:</strong> ω = ωn</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfica principal -->
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfica de velocidad -->
+        <div class="chart-container chart-full">
+            <canvas id="velocityChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let mainChart, velocityChart;
+        let systemData = {
+            mass: 1.0,
+            damping: 0.5,
+            stiffness: 4.0,
+            inputType: 'step',
+            amplitude: 1.0,
+            frequency: 1.0,
+            customFunction: 'sin(2*t)',
+            timeEnd: 10
+        };
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            setupEventListeners();
+            updateSystem();
+        });
+
+        function setupEventListeners() {
+            // Parámetros del sistema
+            document.getElementById('mass').addEventListener('input', function() {
+                systemData.mass = parseFloat(this.value);
+                document.getElementById('massValue').textContent = this.value;
+                updateSystem();
+            });
+
+            document.getElementById('damping').addEventListener('input', function() {
+                systemData.damping = parseFloat(this.value);
+                document.getElementById('dampingValue').textContent = this.value;
+                updateSystem();
+            });
+
+            document.getElementById('stiffness').addEventListener('input', function() {
+                systemData.stiffness = parseFloat(this.value);
+                document.getElementById('stiffnessValue').textContent = this.value;
+                updateSystem();
+            });
+
+            // Parámetros de entrada
+            document.getElementById('inputType').addEventListener('change', function() {
+                systemData.inputType = this.value;
+                toggleInputControls();
+                updateSystem();
+            });
+
+            document.getElementById('amplitude').addEventListener('input', function() {
+                systemData.amplitude = parseFloat(this.value);
+                document.getElementById('amplitudeValue').textContent = this.value;
+                updateSystem();
+            });
+
+            document.getElementById('frequency').addEventListener('input', function() {
+                systemData.frequency = parseFloat(this.value);
+                document.getElementById('frequencyValue').textContent = this.value;
+                updateSystem();
+            });
+
+            document.getElementById('customFunction').addEventListener('input', function() {
+                systemData.customFunction = this.value;
+                updateSystem();
+            });
+
+            document.getElementById('timeEnd').addEventListener('input', function() {
+                systemData.timeEnd = parseInt(this.value);
+                document.getElementById('timeValue').textContent = this.value;
+                updateSystem();
+            });
+        }
+
+        function toggleInputControls() {
+            const frequencyGroup = document.getElementById('frequencyGroup');
+            const customGroup = document.getElementById('customGroup');
+            
+            frequencyGroup.style.display = systemData.inputType === 'sine' ? 'block' : 'none';
+            customGroup.style.display = systemData.inputType === 'custom' ? 'block' : 'none';
+        }
+
+        function calculateSystemParameters() {
+            const { mass, damping, stiffness } = systemData;
+            const wn = Math.sqrt(stiffness / mass);
+            const zeta = damping / (2 * Math.sqrt(mass * stiffness));
+            const wd = wn * Math.sqrt(Math.max(0, 1 - zeta * zeta));
+            const sigma = zeta * wn;
+            
+            let dampingType, dampingClass;
+            if (zeta < 1) {
+                dampingType = 'Subamortiguado';
+                dampingClass = 'subamortiguado';
+            } else if (Math.abs(zeta - 1) < 0.01) {
+                dampingType = 'Críticamente amortiguado';
+                dampingClass = 'critico';
+            } else {
+                dampingType = 'Sobreamortiguado';
+                dampingClass = 'sobreamortiguado';
+            }
+            
+            return { wn, zeta, wd, sigma, dampingType, dampingClass };
+        }
+
+        function generateInput(t, type, params) {
+            const { amplitude, frequency, customFunction } = systemData;
+            const dt = 0.01;
+            
+            switch (type) {
+                case 'impulse':
+                    return t < dt ? amplitude / dt : 0;
+                case 'step':
+                    return amplitude;
+                case 'sine':
+                    return amplitude * Math.sin(2 * Math.PI * frequency * t);
+                case 'resonance':
+                    return amplitude * Math.sin(params.wn * t);
+                case 'custom':
+                    try {
+                        const expr = customFunction.replace(/t/g, t.toString())
+                            .replace(/sin/g, 'Math.sin')
+                            .replace(/cos/g, 'Math.cos')
+                            .replace(/exp/g, 'Math.exp')
+                            .replace(/\^/g, '**');
+                        return eval(expr);
+                    } catch {
+                        return 0;
+                    }
+                default:
+                    return 0;
+            }
+        }
+
+        function simulate() {
+            const { mass, damping, stiffness, timeEnd } = systemData;
+            const dt = 0.01;
+            const timeSteps = Math.floor(timeEnd / dt);
+            const params = calculateSystemParameters();
+            
+            const data = [];
+            let x = 0, v = 0;
+            
+            for (let i = 0; i <= timeSteps; i++) {
+                const t = i * dt;
+                const input = generateInput(t, systemData.inputType, params);
+                
+                // Runge-Kutta 4
+                const k1v = (input - damping * v - stiffness * x) / mass;
+                const k1x = v;
+                
+                const k2v = (input - damping * (v + dt/2 * k1v) - stiffness * (x + dt/2 * k1x)) / mass;
+                const k2x = v + dt/2 * k1v;
+                
+                const k3v = (input - damping * (v + dt/2 * k2v) - stiffness * (x + dt/2 * k2x)) / mass;
+                const k3x = v + dt/2 * k2v;
+                
+                const k4v = (input - damping * (v + dt * k3v) - stiffness * (x + dt * k3x)) / mass;
+                const k4x = v + dt * k3v;
+                
+                v += dt/6 * (k1v + 2*k2v + 2*k3v + k4v);
+                x += dt/6 * (k1x + 2*k2x + 2*k3x + k4x);
+                
+                if (i % 5 === 0) {
+                    data.push({
+                        time: parseFloat(t.toFixed(3)),
+                        position: parseFloat(x.toFixed(4)),
+                        input: parseFloat(input.toFixed(4)),
+                        velocity: parseFloat(v.toFixed(4))
+                    });
+                }
+            }
+            
+            return data;
+        }
+
+        function updateSystem() {
+            const params = calculateSystemParameters();
+            updateDisplays(params);
+            updateCharts();
+        }
+
+        function updateDisplays(params) {
+            const { mass, damping, stiffness } = systemData;
+            
+            // Función de transferencia
+            const tfElement = document.getElementById('transferFunction');
+            tfElement.textContent = `H(s) = ${(1/mass).toFixed(3)} / (s² + ${(damping/mass).toFixed(3)}s + ${(stiffness/mass).toFixed(3)})`;
+            
+            // Parámetros del sistema
+            const paramsElement = document.getElementById('systemParams');
+            paramsElement.innerHTML = `
+                <p><strong>ωn:</strong> ${params.wn.toFixed(3)} rad/s</p>
+                <p><strong>ζ:</strong> ${params.zeta.toFixed(3)}</p>
+                <p><strong>ωd:</strong> ${params.wd.toFixed(3)} rad/s</p>
+                <p><strong>σ:</strong> ${params.sigma.toFixed(3)} rad/s</p>
+                <p><strong>Tipo:</strong> <span class="damping-type ${params.dampingClass}">${params.dampingType}</span></p>
+            `;
+        }
+
+        function initializeCharts() {
+            // Gráfica principal
+            const mainCtx = document.getElementById('mainChart').getContext('2d');
+            mainChart = new Chart(mainCtx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Posición x(t)',
+                            data: [],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Entrada F(t)',
+                            data: [],
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Tiempo (s)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Amplitud'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Respuesta del Sistema'
+                        }
+                    }
+                }
+            });
+
+            // Gráfica de velocidad
+            const velocityCtx = document.getElementById('velocityChart').getContext('2d');
+            velocityChart = new Chart(velocityCtx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Velocidad v(t)',
+                            data: [],
+                            borderColor: '#059669',
+                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Tiempo (s)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Velocidad (m/s)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Velocidad del Sistema'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            const data = simulate();
+            
+            // Actualizar gráfica principal
+            mainChart.data.datasets[0].data = data.map(d => ({x: d.time, y: d.position}));
+            mainChart.data.datasets[1].data = data.map(d => ({x: d.time, y: d.input}));
+            mainChart.update('none');
+            
+            // Actualizar gráfica de velocidad
+            velocityChart.data.datasets[0].data = data.map(d => ({x: d.time, y: d.velocity}));
+            velocityChart.update('none');
+        }
+    </script>
+</body>
+</html>
